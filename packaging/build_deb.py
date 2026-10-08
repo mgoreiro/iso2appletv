@@ -61,7 +61,7 @@ MANPAGE = r""".TH ISO2APPLETV 1 "" "iso2appletv" "Comandos de usuario"
 iso2appletv \- convierte ISOs de DVD/Blu-ray a .m4v para Apple TV
 .SH SINOPSIS
 .B iso2appletv
-[\fIopciones\fR] \fIimagen.iso\fR...
+[\fIopciones\fR] [\fIimagen.iso|carpeta\fR...]
 .SH DESCRIPCIÓN
 Interfaz de terminal sobre HandBrakeCLI. Escanea las imágenes, lista los
 títulos (o capítulos) y los convierte uno a uno a H.264 High@4.1 (máx. 720p)
@@ -82,6 +82,9 @@ Duración mínima de un título para procesarlo (def. 300).
 .TP
 .BR \-q ", " \-\-quality " " \fIRF\fR
 Calidad x264, menor = mejor (def. 20).
+.TP
+.BR \-r ", " \-\-recursive
+Al pasar una carpeta, buscar imágenes también en sus subcarpetas.
 .TP
 .BR \-t ", " \-\-titles " " \fILISTA\fR
 Solo estos títulos, separados por comas.
@@ -119,6 +122,11 @@ Reencolar el fichero seleccionado.
 .TP
 .B l
 Alternar log y resumen.
+.TP
+.B i
+Buscar y añadir imágenes ISO con un explorador de ficheros (se abre solo si se
+arranca sin argumentos). Dentro: espacio marca, \fBc\fR añade las marcadas,
+\fB/\fR pide una ruta, \fB.\fR muestra ocultos.
 .TP
 .B o
 Cambiar la carpeta de salida.

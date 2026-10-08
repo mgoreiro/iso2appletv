@@ -104,6 +104,22 @@ def save_config(cfg: dict) -> Optional[str]:
     return None
 
 
+ISO_EXT = (".iso", ".img")
+
+
+def expand_inputs(paths, recursive=False):
+    """Las carpetas se sustituyen por las imágenes que contienen."""
+    out = []
+    for p in paths:
+        p = os.path.expanduser(p)
+        if os.path.isdir(p):
+            it = Path(p).rglob("*") if recursive else Path(p).glob("*")
+            out += sorted(str(x) for x in it if x.is_file() and x.suffix.lower() in ISO_EXT)
+        else:
+            out.append(p)
+    return out
+
+
 # --------------------------------------------------------------------------
 # Utilidades
 # --------------------------------------------------------------------------
@@ -322,6 +338,10 @@ class App:
         self.msg = ""
         self.msg_until = 0.0
         self.help = False
+        self.isos: set = set()
+        self.scanning = 0
+        self.scan_lock = threading.Lock()
+        self.auto_browse = not args.isos
         self.cfg = load_config()
         self.out_base = os.path.expanduser(
             args.output if args.output is not None else self.cfg.get("output_dir") or DEFAULT_OUT_DIR)
@@ -361,18 +381,19 @@ class App:
         self.say(f"Carpeta de salida: {path}" + (f"  (no se pudo guardar la config: {err})" if err else ""), 6)
 
     @staticmethod
-    def complete_dir(text: str) -> str:
+    def complete_dir(text: str, files: bool = False) -> str:
         import glob
         base = os.path.expanduser(text)
-        cands = [c for c in glob.glob(glob.escape(base) + "*") if os.path.isdir(c)]
+        cands = [c for c in glob.glob(glob.escape(base) + "*") if files or os.path.isdir(c)]
         if not cands:
             return text
         if len(cands) == 1:
-            return cands[0].rstrip("/") + "/"
+            return cands[0] + ("/" if os.path.isdir(cands[0]) else "")
         return os.path.commonprefix(cands)
 
-    def prompt_output_dir(self, scr):
-        text, pos, err = list(self.out_base), len(self.out_base), ""
+    def ask_line(self, scr, title, sub, initial, accept, files=False):
+        """Entrada de texto modal. accept(texto) -> (valor|None, error). Devuelve valor o None."""
+        text, pos, err = list(initial), len(initial), ""
         H, W = scr.getmaxyx()
         w = min(W - 4, max(64, W * 2 // 3))
         win = curses.newwin(7, w, max(0, H // 2 - 3), (W - w) // 2)
@@ -387,8 +408,8 @@ class App:
                 win.attrset(curses.color_pair(4) | curses.A_BOLD)
                 win.box()
                 win.attrset(0)
-                self.put(win, 0, 2, " Carpeta de salida ", curses.A_REVERSE | curses.color_pair(4), w - 4)
-                self.put(win, 1, 2, "Las conversiones pendientes se guardarán aquí:", curses.A_DIM, iw)
+                self.put(win, 0, 2, f" {title} ", curses.A_REVERSE | curses.color_pair(4), w - 4)
+                self.put(win, 1, 2, sub, curses.A_DIM, iw)
                 off = max(0, pos - iw + 1)
                 shown = "".join(text)[off:off + iw]
                 self.put(win, 3, 2, shown.ljust(iw), curses.A_UNDERLINE, iw + 1)
@@ -401,18 +422,12 @@ class App:
                 except curses.error:
                     continue
                 if ch in ("\n", "\r", curses.KEY_ENTER):
-                    path = os.path.abspath(os.path.expanduser("".join(text).strip() or DEFAULT_OUT_DIR))
-                    try:
-                        os.makedirs(path, exist_ok=True)
-                        if not os.access(path, os.W_OK):
-                            raise PermissionError(f"sin permiso de escritura en {path}")
-                    except OSError as e:
-                        err = str(e)[:iw]
-                        continue
-                    self.set_output_dir(path)
-                    return
+                    val, err = accept("".join(text).strip())
+                    if val is not None:
+                        return val
+                    continue
                 elif ch == "\x1b":
-                    return
+                    return None
                 elif ch in (curses.KEY_BACKSPACE, "\x7f", "\b"):
                     if pos:
                         del text[pos - 1]
@@ -431,7 +446,7 @@ class App:
                 elif ch == "\x15":
                     text, pos = [], 0
                 elif ch == "\t":
-                    text = list(self.complete_dir("".join(text)))
+                    text = list(self.complete_dir("".join(text), files))
                     pos = len(text)
                 elif isinstance(ch, str) and ch.isprintable():
                     text.insert(pos, ch)
@@ -439,6 +454,162 @@ class App:
                 err = ""
         finally:
             curses.curs_set(0)
+        return None
+
+    def prompt_output_dir(self, scr):
+        def accept(t):
+            path = os.path.abspath(os.path.expanduser(t or DEFAULT_OUT_DIR))
+            try:
+                os.makedirs(path, exist_ok=True)
+                if not os.access(path, os.W_OK):
+                    raise PermissionError(f"sin permiso de escritura en {path}")
+            except OSError as e:
+                return None, str(e)
+            return path, ""
+
+        path = self.ask_line(scr, "Carpeta de salida", "Las conversiones pendientes se guardarán aquí:",
+                             self.out_base, accept)
+        if path:
+            self.set_output_dir(path)
+
+    def browse_isos(self, scr):
+        """Explorador de ficheros modal. Devuelve la lista de imágenes elegidas o None."""
+        cwd = Path(self.cfg.get("last_iso_dir") or os.getcwd())
+        if not cwd.is_dir():
+            cwd = Path.home()
+        marked: set = set()
+        hidden, cur, top = False, 0, 0
+        H, W = scr.getmaxyx()
+        h, w = max(8, H - 4), min(W - 4, 110)
+        win = curses.newwin(h, w, 2, (W - w) // 2)
+        win.keypad(True)
+        win.timeout(250)
+        iw, vis = w - 2, h - 4
+        entries, listed, lerr = [], None, ""
+
+        def relist():
+            nonlocal entries, lerr
+            entries, lerr = [], ""
+            if cwd.parent != cwd:
+                entries.append(("..", str(cwd.parent), True, 0))
+            dirs, files = [], []
+            try:
+                for e in sorted(os.scandir(cwd), key=lambda e: e.name.lower()):
+                    if e.name.startswith(".") and not hidden:
+                        continue
+                    try:
+                        if e.is_dir():
+                            dirs.append((e.name + "/", e.path, True, 0))
+                        elif e.name.lower().endswith(ISO_EXT):
+                            files.append((e.name, e.path, False, e.stat().st_size))
+                    except OSError:
+                        continue
+            except OSError as ex:
+                lerr = str(ex)
+            entries += dirs + files
+
+        def accept_path(t):
+            pth = os.path.abspath(os.path.expanduser(t))
+            if os.path.exists(pth):
+                return pth, ""
+            return None, "no existe"
+
+        def finish(extra=None):
+            res = set(marked)
+            if extra:
+                res.add(extra)
+            self.cfg["last_iso_dir"] = str(cwd)
+            save_config(self.cfg)
+            return sorted(res) if res else None
+
+        while not self.quit:
+            if listed != (cwd, hidden):
+                relist()
+                listed, cur, top = (cwd, hidden), 0, 0
+            cur = min(max(cur, 0), max(0, len(entries) - 1))
+            if cur < top:
+                top = cur
+            elif cur >= top + vis:
+                top = cur - vis + 1
+            self.draw(scr)
+            win.erase()
+            win.attrset(curses.color_pair(4) | curses.A_BOLD)
+            win.box()
+            win.attrset(0)
+            self.put(win, 0, 2, f" Añadir ISOs — {cwd} ", curses.A_REVERSE | curses.color_pair(4), w - 4)
+            if not entries:
+                self.put(win, 1, 1, lerr or "(vacío)", curses.A_DIM, iw)
+            for r in range(vis):
+                i = top + r
+                if i >= len(entries):
+                    break
+                name, path, isdir, size = entries[i]
+                if isdir:
+                    left, right, attr = f"   ▸ {name}", "", curses.color_pair(4)
+                else:
+                    left = f" {'[x]' if path in marked else '[ ]'} {name}"
+                    right = fmt_size(size)
+                    attr = curses.color_pair(1) if path in marked else 0
+                line = left[:iw - len(right) - 1].ljust(iw - len(right)) + right
+                if i == cur:
+                    attr |= curses.A_REVERSE
+                self.put(win, 1 + r, 1, line, attr, iw)
+            self.put(win, h - 3, 2, f"{len(marked)} marcada(s)" + (f"  ·  {lerr}" if lerr and entries else ""),
+                     curses.A_BOLD, iw)
+            self.put(win, h - 2, 2, "↑↓ mover · Enter abrir/elegir · espacio marcar · a todas · c añadir marcadas · "
+                     "/ ruta · . ocultos · ~ inicio · Esc", curses.A_DIM, iw)
+            win.refresh()
+            try:
+                ch = win.get_wch()
+            except curses.error:
+                continue
+            cur_e = entries[cur] if entries else None
+            if ch == curses.KEY_UP:
+                cur -= 1
+            elif ch == curses.KEY_DOWN:
+                cur += 1
+            elif ch == curses.KEY_PPAGE:
+                cur -= vis
+            elif ch == curses.KEY_NPAGE:
+                cur += vis
+            elif ch == curses.KEY_HOME:
+                cur = 0
+            elif ch == curses.KEY_END:
+                cur = len(entries) - 1
+            elif ch in (curses.KEY_LEFT, curses.KEY_BACKSPACE, "\x7f", "\b"):
+                if cwd.parent != cwd:
+                    cwd = cwd.parent
+            elif ch in ("\n", "\r", curses.KEY_ENTER, curses.KEY_RIGHT) and cur_e:
+                if cur_e[2]:
+                    cwd = Path(cur_e[1])
+                elif ch != curses.KEY_RIGHT:
+                    return finish(cur_e[1])
+            elif ch == " " and cur_e and not cur_e[2]:
+                marked.symmetric_difference_update({cur_e[1]})
+                cur += 1
+            elif ch == "a":
+                files = {e[1] for e in entries if not e[2]}
+                if files and files <= marked:
+                    marked -= files
+                else:
+                    marked |= files
+            elif ch == "c":
+                if marked:
+                    return finish()
+            elif ch == "/":
+                pth = self.ask_line(scr, "Ir a ruta", "Carpeta o imagen ISO:", str(cwd) + "/", accept_path, files=True)
+                if pth:
+                    if os.path.isdir(pth):
+                        cwd = Path(pth)
+                    else:
+                        return finish(pth)
+            elif ch == "~":
+                cwd = Path.home()
+            elif ch == ".":
+                hidden = not hidden
+            elif ch in ("\x1b", "q"):
+                return None
+        return None
 
     # ---- mensajes ----
     def say(self, text: str, secs: float = 4.0):
@@ -475,20 +646,45 @@ class App:
 
     # ---- escaneo ----
     def scan_all(self):
-        for iso in self.args.isos:
-            if self.quit:
-                return
-            try:
-                self.scan_iso(iso)
-            except Exception as e:  # noqa: BLE001
-                self.slog(f"ERROR escaneando {iso}: {e}")
-        if not self.jobs:
-            self.slog("No hay títulos que procesar. Prueba con -d 60. (q para salir)")
-            self.phase = "finished"
-            return
-        self.phase = "ready"
-        if self.args.yes:
+        if self.args.isos:
+            self._scan_many(self.args.isos)
+        else:
+            self.slog("Pulsa i para elegir las imágenes ISO a procesar.")
+        if self.phase == "scanning":
+            self.phase = "ready"
+        if self.args.yes and any(j.status == "pending" and j.enabled for j in self.jobs):
             self.start()
+
+    def add_isos(self, paths):
+        new = [os.path.abspath(p) for p in paths if os.path.abspath(p) not in self.isos]
+        if not new:
+            self.say("Esas imágenes ya estaban en la lista")
+            return
+        threading.Thread(target=self._scan_many, args=(new,), daemon=True).start()
+
+    def _scan_many(self, paths):
+        paths = [os.path.abspath(p) for p in paths]
+        with self.scan_lock:
+            self.scanning += 1
+            before = len(self.jobs)
+            try:
+                for iso in paths:
+                    if self.quit:
+                        return
+                    if iso in self.isos:
+                        continue
+                    self.isos.add(iso)
+                    try:
+                        self.scan_iso(iso)
+                    except Exception as e:  # noqa: BLE001
+                        self.slog(f"ERROR escaneando {iso}: {e}")
+            finally:
+                self.scanning -= 1
+        if len(self.jobs) > before:
+            if self.phase == "finished":
+                self.phase = "ready"
+        elif paths:
+            self.say("No se añadió ningún título nuevo (¿duración mínima? prueba -d 60)", 6)
 
     def scan_iso(self, iso: str):
         a = self.args
@@ -544,6 +740,9 @@ class App:
             for ch, udur in units:
                 suffix = f"_T{idx:02d}" + (f"_C{ch:02d}" if ch else "")
                 out = out_dir / f"{base}{suffix}.m4v"
+                if any(x.out == str(out) for x in self.jobs):
+                    self.slog(f"   (omitido: salida duplicada {out.name}; renombra la imagen)")
+                    continue
                 j = Job(iso, idx, ch, len(chl), udur, str(out), audio, subs)
                 self.fill_existing(j, state, out_dir)
                 self.jobs.append(j)
@@ -853,6 +1052,8 @@ class App:
         label = {"scanning": "ESCANEANDO", "ready": "LISTO — pulsa s para iniciar",
                  "running": "PAUSADO" if self.paused else "CONVIRTIENDO",
                  "finished": "FINALIZADO"}[self.phase]
+        if self.scanning and self.phase != "scanning":
+            label += " · escaneando…"
         el = fmt_dur(time.time() - self.run_started) if self.run_started else "--:--:--"
         s = (f" iso2appletv │ {label} │ {done}/{len(self.jobs)} convertidos │ "
              f"{todo} pendientes │ {fail} errores │ sesión {el}")
@@ -932,7 +1133,7 @@ class App:
             foot, fattr = " " + self.msg, curses.color_pair(2) | curses.A_BOLD
         else:
             foot = (" Tab panel │ ↑↓ PgUp/PgDn mover │ espacio incluir │ s iniciar │ p pausa │ "
-                    "x cancelar │ r reintentar │ l log/resumen │ o carpeta │ ? ayuda │ q salir")
+                    "x cancelar │ r reintentar │ l log/resumen │ i añadir ISO │ o carpeta │ ? ayuda │ q salir")
             fattr = curses.A_DIM
         self.put(scr, H - 1, 0, foot.ljust(W), fattr)
         scr.noutrefresh()
@@ -1017,6 +1218,7 @@ class App:
             "r                 reencolar el fichero bajo el cursor (error/cancelado/hecho)",
             "l                 alternar log ↔ resumen del fichero bajo el cursor",
             "g                 ir al fichero que se está convirtiendo",
+            "i                 buscar y añadir imágenes ISO (explorador de ficheros)",
             "o                 cambiar la carpeta de salida (se guarda en la configuración)",
             "q                 salir (pide confirmación si hay una conversión en curso)", "",
             "Los ficheros ya existentes en la carpeta de salida aparecen como convertidos",
@@ -1068,6 +1270,10 @@ class App:
         elif k == ord("l"):
             self.alt_view = not self.alt_view
             self.scroll = None
+        elif k == ord("i"):
+            paths = self.browse_isos(scr)
+            if paths:
+                self.add_isos(paths)
         elif k == ord("o"):
             self.prompt_output_dir(scr)
         elif k == ord("g"):
@@ -1141,6 +1347,10 @@ class App:
                 self.draw_help(scr)
             else:
                 self.draw(scr)
+            if self.auto_browse and self.phase != "scanning":
+                self.auto_browse = False
+                self.key(scr, ord("i"))
+                continue
             k = scr.getch()
             if k != -1 and k != curses.KEY_RESIZE:
                 self.key(scr, k)
@@ -1168,7 +1378,9 @@ def check_deps() -> int:
 def main():
     ap = argparse.ArgumentParser(
         description="TUI para convertir ISOs de DVD/Blu-ray a .m4v para Apple TV con HandBrakeCLI.")
-    ap.add_argument("isos", nargs="*", metavar="imagen.iso")
+    ap.add_argument("isos", nargs="*", metavar="imagen.iso|carpeta",
+                    help="imágenes o carpetas con imágenes; sin argumentos se abre el explorador")
+    ap.add_argument("-r", "--recursive", action="store_true", help="buscar ISOs también en subcarpetas")
     ap.add_argument("-o", "--output", default=None, help="directorio de salida solo para esta ejecución (la carpeta habitual se cambia con la tecla o)")
     ap.add_argument("-d", "--min-duration", type=int, default=300, metavar="SEG",
                     help="duración mínima de un título (def: 300)")
@@ -1182,8 +1394,7 @@ def main():
 
     if args.check:
         sys.exit(check_deps())
-    if not args.isos:
-        ap.error("indica al menos una imagen .iso")
+    args.isos = expand_inputs(args.isos, args.recursive) if args.isos else []
     if not shutil.which(HB):
         sys.exit(f"Error: no se encuentra {HB} (ejecuta con -D para ver las dependencias)")
     if not sys.stdout.isatty():

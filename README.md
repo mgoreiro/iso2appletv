@@ -19,12 +19,14 @@ sudo apt install ./iso2appletv_1.0.0_all.deb
 ## Uso
 
 ```bash
+iso2appletv                          # sin argumentos: abre el explorador para elegir ISOs
 iso2appletv peli.iso                 # abre la lista y espera a pulsar s
+iso2appletv ~/isos/ -r               # todas las ISOs de una carpeta (y subcarpetas)
 iso2appletv -y -c a.iso b.iso        # un fichero por capítulo, empieza solo
 ```
 
 Teclas: `Tab` cambia de panel, flechas/RePág/AvPág desplazan, `espacio` incluye/omite, `s` inicia,
-`p` pausa, `x` cancela el actual, `r` reintenta, `l` log/resumen, `o` carpeta de salida, `?` ayuda, `q` salir.
+`p` pausa, `x` cancela el actual, `r` reintenta, `l` log/resumen, `i` añadir ISOs, `o` carpeta de salida, `?` ayuda, `q` salir.
 
 `iso2appletv.sh` es el script original (sin interfaz).
 
