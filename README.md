@@ -7,13 +7,14 @@ TUI para convertir ISOs de DVD/Blu-ray a `.m4v` compatible con Apple TV usando H
 - HandBrakeCLI se ejecuta con `nice -n 19` (y `ionice -c3` si existe).
 - Salida a `.m4v.part` y renombrado solo al terminar bien.
 - Carpeta de salida configurable desde la interfaz (tecla `o`).
+- Explorador de ISOs integrado (tecla `i`): el fondo se congela mientras está abierto, sin parpadeo del monitor.
 
 ## Instalación (Debian/Ubuntu)
 
 Descarga el `.deb` de la sección *Releases* e instálalo:
 
 ```bash
-sudo apt install ./iso2appletv_1.0.0_all.deb
+sudo apt install ./iso2appletv_1.1.1_all.deb
 ```
 
 ## Uso
@@ -33,7 +34,7 @@ Teclas: `Tab` cambia de panel, flechas/RePág/AvPág desplazan, `espacio` incluy
 ## Construir el paquete
 
 ```bash
-python3 packaging/build_deb.py --version 1.0.0   # genera dist/iso2appletv_1.0.0_all.deb
+python3 packaging/build_deb.py --version 1.0.0   # genera dist/iso2appletv_1.1.1_all.deb
 ```
 
 ## Licencia
