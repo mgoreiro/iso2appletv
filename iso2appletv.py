@@ -338,6 +338,7 @@ class App:
         self.msg = ""
         self.msg_until = 0.0
         self.help = False
+        self.modal = 0             # >0 mientras hay una ventana modal (el fondo no se redibuja)
         self.isos: set = set()
         self.scanning = 0
         self.scan_lock = threading.Lock()
@@ -401,9 +402,11 @@ class App:
         win.timeout(250)
         iw = w - 4
         curses.curs_set(1)
+        if not self.modal:
+            self.draw(scr)     # fondo congelado: se pinta una sola vez
+        self.modal += 1
         try:
             while not self.quit:
-                self.draw(scr)
                 win.erase()
                 win.attrset(curses.color_pair(4) | curses.A_BOLD)
                 win.box()
@@ -453,6 +456,7 @@ class App:
                     pos += 1
                 err = ""
         finally:
+            self.modal -= 1
             curses.curs_set(0)
         return None
 
@@ -474,6 +478,13 @@ class App:
 
     def browse_isos(self, scr):
         """Explorador de ficheros modal. Devuelve la lista de imágenes elegidas o None."""
+        self.modal += 1
+        try:
+            return self._browse_isos(scr)
+        finally:
+            self.modal -= 1
+
+    def _browse_isos(self, scr):
         cwd = Path(self.cfg.get("last_iso_dir") or os.getcwd())
         if not cwd.is_dir():
             cwd = Path.home()
@@ -522,6 +533,7 @@ class App:
             save_config(self.cfg)
             return sorted(res) if res else None
 
+        self.draw(scr)         # fondo congelado: se pinta una sola vez
         while not self.quit:
             if listed != (cwd, hidden):
                 relist()
@@ -531,7 +543,6 @@ class App:
                 top = cur
             elif cur >= top + vis:
                 top = cur - vis + 1
-            self.draw(scr)
             win.erase()
             win.attrset(curses.color_pair(4) | curses.A_BOLD)
             win.box()
