@@ -105,16 +105,23 @@ def save_config(cfg: dict) -> Optional[str]:
 
 
 ISO_EXT = (".iso", ".img")
+VIDEO_EXT = (".mkv", ".mp4", ".m4v", ".avi", ".mov", ".ts", ".m2ts", ".mts", ".wmv",
+             ".mpg", ".mpeg", ".vob", ".flv", ".webm", ".divx", ".ogm")
+MEDIA_EXT = ISO_EXT + VIDEO_EXT
+
+
+def is_video(path: str) -> bool:
+    return path.lower().endswith(VIDEO_EXT)
 
 
 def expand_inputs(paths, recursive=False):
-    """Las carpetas se sustituyen por las imágenes que contienen."""
+    """Las carpetas se sustituyen por las imágenes ISO y ficheros de vídeo que contienen."""
     out = []
     for p in paths:
         p = os.path.expanduser(p)
         if os.path.isdir(p):
             it = Path(p).rglob("*") if recursive else Path(p).glob("*")
-            out += sorted(str(x) for x in it if x.is_file() and x.suffix.lower() in ISO_EXT)
+            out += sorted(str(x) for x in it if x.is_file() and x.suffix.lower() in MEDIA_EXT)
         else:
             out.append(p)
     return out
@@ -511,7 +518,7 @@ class App:
                     try:
                         if e.is_dir():
                             dirs.append((e.name + "/", e.path, True, 0))
-                        elif e.name.lower().endswith(ISO_EXT):
+                        elif e.name.lower().endswith(MEDIA_EXT):
                             files.append((e.name, e.path, False, e.stat().st_size))
                     except OSError:
                         continue
@@ -547,7 +554,7 @@ class App:
             win.attrset(curses.color_pair(4) | curses.A_BOLD)
             win.box()
             win.attrset(0)
-            self.put(win, 0, 2, f" Añadir ISOs — {cwd} ", curses.A_REVERSE | curses.color_pair(4), w - 4)
+            self.put(win, 0, 2, f" Añadir ISOs / vídeos — {cwd} ", curses.A_REVERSE | curses.color_pair(4), w - 4)
             if not entries:
                 self.put(win, 1, 1, lerr or "(vacío)", curses.A_DIM, iw)
             for r in range(vis):
@@ -568,7 +575,7 @@ class App:
             self.put(win, h - 3, 2, f"{len(marked)} marcada(s)" + (f"  ·  {lerr}" if lerr and entries else ""),
                      curses.A_BOLD, iw)
             self.put(win, h - 2, 2, "↑↓ mover · Enter abrir/elegir · espacio marcar · a todas · c añadir marcadas · "
-                     "/ ruta · . ocultos · ~ inicio · Esc", curses.A_DIM, iw)
+                     "d carpeta · D con subcarpetas · / ruta · . ocultos · Esc", curses.A_DIM, iw)
             win.refresh()
             try:
                 ch = win.get_wch()
@@ -607,8 +614,14 @@ class App:
             elif ch == "c":
                 if marked:
                     return finish()
+            elif ch in ("d", "D"):   # toda la carpeta actual (D: con subcarpetas)
+                found = expand_inputs([str(cwd)], recursive=(ch == "D"))
+                if found:
+                    marked.update(found)
+                    return finish()
+                lerr = "no hay ISOs ni vídeos en esta carpeta"
             elif ch == "/":
-                pth = self.ask_line(scr, "Ir a ruta", "Carpeta o imagen ISO:", str(cwd) + "/", accept_path, files=True)
+                pth = self.ask_line(scr, "Ir a ruta", "Carpeta, imagen ISO o vídeo:", str(cwd) + "/", accept_path, files=True)
                 if pth:
                     if os.path.isdir(pth):
                         cwd = Path(pth)
@@ -660,7 +673,7 @@ class App:
         if self.args.isos:
             self._scan_many(self.args.isos)
         else:
-            self.slog("Pulsa i para elegir las imágenes ISO a procesar.")
+            self.slog("Pulsa i para elegir las ISOs o vídeos a procesar.")
         if self.phase == "scanning":
             self.phase = "ready"
         if self.args.yes and any(j.status == "pending" and j.enabled for j in self.jobs):
@@ -702,10 +715,12 @@ class App:
         if not os.path.isfile(iso):
             self.slog(f"ERROR: no existe '{iso}'")
             return
+        video = is_video(iso)
+        mind = 0 if video else a.min_duration   # un vídeo elegido a propósito no se descarta por corto
         self.slog(f">> Escaneando '{iso}' ...")
         with tempfile.TemporaryFile() as errf:
             r = subprocess.run(
-                [HB, "-i", iso, "-t", "0", "--min-duration", str(a.min_duration), "--json"],
+                [HB, "-i", iso, "-t", "0", "--min-duration", str(mind), "--json"],
                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=errf,
             )
             errf.seek(0)
@@ -732,11 +747,12 @@ class App:
         state = self.load_state(out_dir)
         base = Path(iso).stem
         added = 0
+        n_titles = len(data.get("TitleList", []))
         for t in data.get("TitleList", []):
             idx = t["Index"]
             d = t["Duration"]
             dur = d["Hours"] * 3600 + d["Minutes"] * 60 + d["Seconds"]
-            if dur < a.min_duration or (only and idx not in only):
+            if dur < mind or (only and idx not in only):
                 continue
             chl = t.get("ChapterList", [])
             audio = [x.get("Description") or x.get("Language", "?") for x in t.get("AudioList", [])]
@@ -749,10 +765,14 @@ class App:
             else:
                 units = [(None, dur)]
             for ch, udur in units:
-                suffix = f"_T{idx:02d}" + (f"_C{ch:02d}" if ch else "")
+                # un vídeo con un único título no necesita sufijo _Txx
+                suffix = ("" if video and n_titles == 1 else f"_T{idx:02d}") + (f"_C{ch:02d}" if ch else "")
                 out = out_dir / f"{base}{suffix}.m4v"
+                if out.resolve() == Path(iso).resolve():
+                    self.slog(f"   (omitido: la salida sobrescribiría el original {out.name})")
+                    continue
                 if any(x.out == str(out) for x in self.jobs):
-                    self.slog(f"   (omitido: salida duplicada {out.name}; renombra la imagen)")
+                    self.slog(f"   (omitido: salida duplicada {out.name}; renombra el origen)")
                     continue
                 j = Job(iso, idx, ch, len(chl), udur, str(out), audio, subs)
                 self.fill_existing(j, state, out_dir)
@@ -948,7 +968,7 @@ class App:
         def kv(k, v):
             L.append(f"{k:<17}{v}")
 
-        what = f"título {j.title}" + (f", capítulo {j.chapter}/{j.chaps}" if j.chapter else f" ({j.chaps} capítulos)")
+        what = (f"título {j.title}" if not is_video(j.iso) else "vídeo") + (f", capítulo {j.chapter}/{j.chaps}" if j.chapter else f" ({j.chaps} capítulos)")
         kv("Origen", f"{Path(j.iso).name}  {what}")
         kv("Duración vídeo", fmt_dur(j.dur))
         for i, a in enumerate(j.audio):
@@ -1229,7 +1249,7 @@ class App:
             "r                 reencolar el fichero bajo el cursor (error/cancelado/hecho)",
             "l                 alternar log ↔ resumen del fichero bajo el cursor",
             "g                 ir al fichero que se está convirtiendo",
-            "i                 buscar y añadir imágenes ISO (explorador de ficheros)",
+            "i                 buscar y añadir ISOs o vídeos (explorador de ficheros)",
             "o                 cambiar la carpeta de salida (se guarda en la configuración)",
             "q                 salir (pide confirmación si hay una conversión en curso)", "",
             "Los ficheros ya existentes en la carpeta de salida aparecen como convertidos",
@@ -1388,13 +1408,13 @@ def check_deps() -> int:
 
 def main():
     ap = argparse.ArgumentParser(
-        description="TUI para convertir ISOs de DVD/Blu-ray a .m4v para Apple TV con HandBrakeCLI.")
-    ap.add_argument("isos", nargs="*", metavar="imagen.iso|carpeta",
-                    help="imágenes o carpetas con imágenes; sin argumentos se abre el explorador")
-    ap.add_argument("-r", "--recursive", action="store_true", help="buscar ISOs también en subcarpetas")
+        description="TUI para convertir ISOs de DVD/Blu-ray y ficheros de vídeo a .m4v para Apple TV con HandBrakeCLI.")
+    ap.add_argument("isos", nargs="*", metavar="origen",
+                    help="imágenes ISO, ficheros de vídeo o carpetas con ellos; sin argumentos se abre el explorador")
+    ap.add_argument("-r", "--recursive", action="store_true", help="al pasar una carpeta, buscar también en subcarpetas")
     ap.add_argument("-o", "--output", default=None, help="directorio de salida solo para esta ejecución (la carpeta habitual se cambia con la tecla o)")
     ap.add_argument("-d", "--min-duration", type=int, default=300, metavar="SEG",
-                    help="duración mínima de un título (def: 300)")
+                    help="duración mínima de un título de ISO (def: 300; no afecta a ficheros de vídeo)")
     ap.add_argument("-q", "--quality", type=int, default=20, metavar="RF",
                     help="calidad x264, menor = mejor (def: 20)")
     ap.add_argument("-t", "--titles", default="", metavar="LISTA", help="solo estos títulos (ej: 1,3,5)")

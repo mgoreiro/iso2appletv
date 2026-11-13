@@ -20,10 +20,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PKG = "iso2appletv"
 MAINTAINER = "Miguel <mgoreiro@gmail.com>"
-DESCRIPTION_SHORT = "TUI para convertir ISOs de DVD/Blu-ray a .m4v para Apple TV"
+DESCRIPTION_SHORT = "TUI para convertir ISOs y vídeos a .m4v para Apple TV"
 DESCRIPTION_LONG = """\
  Interfaz de terminal que extrae los títulos de video de imágenes ISO de
- DVD/Blu-ray y los convierte con HandBrakeCLI a .m4v compatible con Apple TV
+ DVD/Blu-ray, o toma ficheros de vídeo sueltos (o carpetas que los contengan),
+ y los convierte con HandBrakeCLI a .m4v compatible con Apple TV
  (H.264 High@4.1 hasta 720p, audio AC3, marcadores de capítulo).
  .
  Muestra la lista de ficheros con su estado y hora de finalización, el log de
@@ -61,10 +62,12 @@ MANPAGE = r""".TH ISO2APPLETV 1 "" "iso2appletv" "Comandos de usuario"
 iso2appletv \- convierte ISOs de DVD/Blu-ray a .m4v para Apple TV
 .SH SINOPSIS
 .B iso2appletv
-[\fIopciones\fR] [\fIimagen.iso|carpeta\fR...]
+[\fIopciones\fR] [\fIorigen\fR...]
 .SH DESCRIPCIÓN
-Interfaz de terminal sobre HandBrakeCLI. Escanea las imágenes, lista los
-títulos (o capítulos) y los convierte uno a uno a H.264 High@4.1 (máx. 720p)
+Interfaz de terminal sobre HandBrakeCLI. Cada \fIorigen\fR puede ser una imagen
+ISO, un fichero de vídeo (mkv, mp4, avi, mov, ts, m2ts, wmv, mpg, vob...) o una
+carpeta con ellos. Escanea los orígenes, lista los títulos (o capítulos) y los
+convierte uno a uno a H.264 High@4.1 (máx. 720p)
 con audio AC3. HandBrakeCLI se ejecuta con \fBnice -n 19\fR (y \fBionice -c3\fR
 si está disponible).
 .PP
@@ -78,13 +81,14 @@ desde la interfaz con la tecla \fBo\fR y se guarda en
 \fI~/.config/iso2appletv/config.json\fR (por defecto \fB~/HandBrake\fR).
 .TP
 .BR \-d ", " \-\-min\-duration " " \fISEG\fR
-Duración mínima de un título para procesarlo (def. 300).
+Duración mínima de un título de ISO para procesarlo (def. 300). No afecta a
+los ficheros de vídeo.
 .TP
 .BR \-q ", " \-\-quality " " \fIRF\fR
 Calidad x264, menor = mejor (def. 20).
 .TP
 .BR \-r ", " \-\-recursive
-Al pasar una carpeta, buscar imágenes también en sus subcarpetas.
+Al pasar una carpeta, buscar también en sus subcarpetas.
 .TP
 .BR \-t ", " \-\-titles " " \fILISTA\fR
 Solo estos títulos, separados por comas.
@@ -124,8 +128,9 @@ Reencolar el fichero seleccionado.
 Alternar log y resumen.
 .TP
 .B i
-Buscar y añadir imágenes ISO con un explorador de ficheros (se abre solo si se
+Buscar y añadir ISOs o vídeos con un explorador de ficheros (se abre solo si se
 arranca sin argumentos). Dentro: espacio marca, \fBc\fR añade las marcadas,
+\fBd\fR añade toda la carpeta actual (\fBD\fR con subcarpetas),
 \fB/\fR pide una ruta, \fB.\fR muestra ocultos.
 .TP
 .B o
