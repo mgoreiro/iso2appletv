@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Construye el paquete Debian de iso2appletv sin necesitar dpkg-deb
+Construye el paquete Debian de transcodex sin necesitar dpkg-deb
 (sirve desde macOS o cualquier Linux).
 
     python3 packaging/build_deb.py [--version 1.0.0] [--out dist]
 
-Genera dist/iso2appletv_<version>_all.deb
+Genera dist/transcodex_<version>_all.deb
 """
 
 import argparse
@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PKG = "iso2appletv"
+PKG = "transcodex"
 MAINTAINER = "Miguel <mgoreiro@gmail.com>"
 DESCRIPTION_SHORT = "TUI para convertir ISOs y vídeos a .m4v para Apple TV"
 DESCRIPTION_LONG = """\
@@ -33,6 +33,8 @@ DESCRIPTION_LONG = """\
 
 CONTROL = f"""\
 Package: {PKG}
+Replaces: iso2appletv
+Conflicts: iso2appletv
 Version: {{version}}
 Section: video
 Priority: optional
@@ -50,18 +52,18 @@ POSTINST = """\
 set -e
 if [ "$1" = "configure" ] && command -v dpkg-reconfigure >/dev/null 2>&1; then
     if dpkg -s libdvd-pkg >/dev/null 2>&1 && ! ldconfig -p 2>/dev/null | grep -q libdvdcss; then
-        echo "iso2appletv: libdvd-pkg instalado pero sin compilar libdvdcss2."
+        echo "transcodex: libdvd-pkg instalado pero sin compilar libdvdcss2."
         echo "             Ejecuta: sudo dpkg-reconfigure libdvd-pkg"
     fi
 fi
 exit 0
 """
 
-MANPAGE = r""".TH ISO2APPLETV 1 "" "iso2appletv" "Comandos de usuario"
+MANPAGE = r""".TH TRANSCODEX 1 "" "transcodex" "Comandos de usuario"
 .SH NOMBRE
-iso2appletv \- convierte ISOs de DVD/Blu-ray a .m4v para Apple TV
+transcodex \- convierte ISOs de DVD/Blu-ray a .m4v para Apple TV
 .SH SINOPSIS
-.B iso2appletv
+.B transcodex
 [\fIopciones\fR] [\fIorigen\fR...]
 .SH DESCRIPCIÓN
 Interfaz de terminal sobre HandBrakeCLI. Cada \fIorigen\fR puede ser una imagen
@@ -78,7 +80,7 @@ Los ficheros se escriben primero como \fI.m4v.part\fR y solo se renombran a
 .BR \-o ", " \-\-output " " \fIDIR\fR
 Directorio de salida solo para esta ejecución. La carpeta habitual se cambia
 desde la interfaz con la tecla \fBo\fR y se guarda en
-\fI~/.config/iso2appletv/config.json\fR (por defecto \fB~/HandBrake\fR).
+\fI~/.config/transcodex/config.json\fR (por defecto \fB~/HandBrake\fR).
 .TP
 .BR \-d ", " \-\-min\-duration " " \fISEG\fR
 Duración mínima de un título de ISO para procesarlo (def. 300). No afecta a
@@ -144,8 +146,8 @@ Salir.
 .SH LICENCIA
 GNU GPL versión 3 o posterior.
 .SH FICHEROS
-\fI~/.config/iso2appletv/config.json\fR contiene la carpeta de salida.
-En el directorio de salida: \fI.iso2appletv.json\fR (resúmenes) y \fI.logs/\fR
+\fI~/.config/transcodex/config.json\fR contiene la carpeta de salida.
+En el directorio de salida: \fI.transcodex.json\fR (resúmenes) y \fI.logs/\fR
 (logs de cada conversión).
 .SH ENTORNO
 .TP
@@ -218,13 +220,13 @@ def main():
     if not re.fullmatch(r"[0-9][A-Za-z0-9.+~-]*", a.version):
         ap.error("versión inválida")
 
-    script = (ROOT / "iso2appletv.py").read_bytes()
+    script = (ROOT / "transcodex.py").read_bytes()
     man = gzip.compress(MANPAGE.encode(), mtime=0)
     docdir = f"usr/share/doc/{PKG}"
 
     files = {   # ruta -> (datos, modo)
-        "usr/bin/iso2appletv": (script, 0o755),
-        f"usr/share/man/man1/iso2appletv.1.gz": (man, 0o644),
+        "usr/bin/transcodex": (script, 0o755),
+        f"usr/share/man/man1/transcodex.1.gz": (man, 0o644),
         f"{docdir}/copyright": (COPYRIGHT.encode(), 0o644),
         f"{docdir}/changelog.gz": (changelog(a.version), 0o644),
         f"{docdir}/LICENSE": ((ROOT / "LICENSE").read_bytes(), 0o644),

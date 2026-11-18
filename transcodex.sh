@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# iso2appletv.sh - Extrae los títulos de video de una ISO de DVD/Blu-ray
+# transcodex.sh - Extrae los títulos de video de una ISO de DVD/Blu-ray
 # a .m4v compatible con Apple TV usando HandBrakeCLI.
 #
 #   Video : H.264 High@4.1, máx. 1280x720 (720p), calidad constante (RF)
@@ -10,7 +10,7 @@
 #   Extra : marcadores de capítulo, desentrelazado automático (DVD),
 #           "optimize" (faststart) para streaming.
 #
-# Dependencias (Ubuntu) - se pueden comprobar/instalar con:  ./iso2appletv.sh -D
+# Dependencias (Ubuntu) - se pueden comprobar/instalar con:  ./transcodex.sh -D
 #   sudo apt install handbrake-cli jq libdvd-pkg libbluray2 libaacs0
 #   sudo dpkg-reconfigure libdvd-pkg        # para DVDs con CSS
 #   (Blu-ray comercial cifrado: además necesita un KEYDB.cfg en ~/.config/aacs/)
