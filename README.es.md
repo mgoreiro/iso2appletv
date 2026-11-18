@@ -40,12 +40,6 @@ Necesita [HandBrakeCLI](https://handbrake.fr/) instalado aparte.
 pipx install transcodex
 ```
 
-### Arch Linux (AUR)
-
-```bash
-yay -S transcodex
-```
-
 ### Desde el código
 
 Un solo fichero de Python 3 sin módulos externos. Con HandBrakeCLI instalado: `python3 transcodex.py`.
