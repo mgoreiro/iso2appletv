@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-iso2appletv - TUI para convertir los títulos de ISOs de DVD/Blu-ray a .m4v
+transcodex - TUI para convertir los títulos de ISOs de DVD/Blu-ray a .m4v
 compatible con Apple TV usando HandBrakeCLI.
 
   Video : H.264 High@4.1, máx. 1280x720, calidad constante (RF)
@@ -49,13 +49,15 @@ from typing import List, Optional
 
 ### CONFIGURACIÓN ###########################################################
 # La carpeta de salida se cambia desde la interfaz (tecla o) y se guarda en
-# ~/.config/iso2appletv/config.json. La opción -o la sobrescribe solo esa vez.
+# ~/.config/transcodex/config.json. La opción -o la sobrescribe solo esa vez.
 DEFAULT_OUT_DIR = os.path.expanduser("~/HandBrake")
 #############################################################################
 
 HB = os.environ.get("HB", "HandBrakeCLI")
-CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))) / "iso2appletv" / "config.json"
-STATE_FILE = ".iso2appletv.json"   # resúmenes de conversiones, dentro de la carpeta de salida
+CONFIG_FILE = Path(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))) / "transcodex" / "config.json"
+LEGACY_CONFIG_FILE = CONFIG_FILE.parent.parent / "iso2appletv" / "config.json"   # nombre anterior
+STATE_FILE = ".transcodex.json"   # resúmenes de conversiones, dentro de la carpeta de salida
+LEGACY_STATE_FILE = ".iso2appletv.json"   # nombre anterior
 LOG_DIR = ".logs"                  # log completo de cada conversión
 MAX_LOG_LINES = 20000
 
@@ -89,10 +91,12 @@ def lowprio() -> List[str]:
 # Configuración persistente
 # --------------------------------------------------------------------------
 def load_config() -> dict:
-    try:
-        return json.loads(CONFIG_FILE.read_text())
-    except Exception:  # noqa: BLE001
-        return {}
+    for f in (CONFIG_FILE, LEGACY_CONFIG_FILE):
+        try:
+            return json.loads(f.read_text())
+        except Exception:  # noqa: BLE001
+            continue
+    return {}
 
 
 def save_config(cfg: dict) -> Optional[str]:
@@ -648,10 +652,12 @@ class App:
 
     @staticmethod
     def load_state(out_dir: Path) -> dict:
-        try:
-            return json.loads((out_dir / STATE_FILE).read_text())
-        except Exception:
-            return {}
+        for name in (STATE_FILE, LEGACY_STATE_FILE):
+            try:
+                return json.loads((out_dir / name).read_text())
+            except Exception:
+                continue
+        return {}
 
     def save_state(self, job: Job):
         d = Path(job.out).parent
@@ -1086,7 +1092,7 @@ class App:
         if self.scanning and self.phase != "scanning":
             label += " · escaneando…"
         el = fmt_dur(time.time() - self.run_started) if self.run_started else "--:--:--"
-        s = (f" iso2appletv │ {label} │ {done}/{len(self.jobs)} convertidos │ "
+        s = (f" transcodex │ {label} │ {done}/{len(self.jobs)} convertidos │ "
              f"{todo} pendientes │ {fail} errores │ sesión {el}")
         return s.ljust(W)[:W]
 
@@ -1237,7 +1243,7 @@ class App:
         H, W = scr.getmaxyx()
         scr.erase()
         lines = [
-            "AYUDA — iso2appletv", "",
+            "AYUDA — transcodex", "",
             "Tab / Shift+Tab   cambiar entre el panel de ficheros y el de log/resumen",
             "↑ ↓ PgUp PgDn     mover el cursor (lista) o desplazar el texto (log)",
             "Home / End        primero/último (lista) · inicio/seguir final (log)",

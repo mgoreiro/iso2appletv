@@ -1,6 +1,8 @@
-# iso2appletv
+# transcodex
 
 TUI para convertir ISOs de DVD/Blu-ray y ficheros de vídeo a `.m4v` compatible con Apple TV usando HandBrakeCLI.
+
+> Antes se llamaba `iso2appletv`. Lee la configuración y el historial del nombre anterior. No está afiliado al proyecto HandBrake.
 
 - Orígenes: imágenes ISO/IMG y ficheros de vídeo (mkv, mp4, avi, mov, ts, m2ts, wmv, mpg, vob…), sueltos o por carpeta; mismas opciones para todos.
 - Vídeo H.264 High@4.1 hasta 720p, audio AC3 (copia si ya es AC3), capítulos, faststart.
@@ -15,28 +17,28 @@ TUI para convertir ISOs de DVD/Blu-ray y ficheros de vídeo a `.m4v` compatible 
 Descarga el `.deb` de la sección *Releases* e instálalo:
 
 ```bash
-sudo apt install ./iso2appletv_1.1.1_all.deb
+sudo apt install ./transcodex_1.1.1_all.deb
 ```
 
 ## Uso
 
 ```bash
-iso2appletv                          # sin argumentos: abre el explorador para elegir ISOs
-iso2appletv peli.iso                 # abre la lista y espera a pulsar s
-iso2appletv ~/isos/ -r               # todas las ISOs y vídeos de una carpeta (y subcarpetas)
-iso2appletv pelicula.mkv serie/      # ficheros de vídeo sueltos o carpetas con vídeos
-iso2appletv -y -c a.iso b.iso        # un fichero por capítulo, empieza solo
+transcodex                          # sin argumentos: abre el explorador para elegir ISOs
+transcodex peli.iso                 # abre la lista y espera a pulsar s
+transcodex ~/isos/ -r               # todas las ISOs y vídeos de una carpeta (y subcarpetas)
+transcodex pelicula.mkv serie/      # ficheros de vídeo sueltos o carpetas con vídeos
+transcodex -y -c a.iso b.iso        # un fichero por capítulo, empieza solo
 ```
 
 Teclas: `Tab` cambia de panel, flechas/RePág/AvPág desplazan, `espacio` incluye/omite, `s` inicia,
 `p` pausa, `x` cancela el actual, `r` reintenta, `l` log/resumen, `i` añadir ISOs, `o` carpeta de salida, `?` ayuda, `q` salir.
 
-`iso2appletv.sh` es el script original (sin interfaz).
+`transcodex.sh` es el script original (sin interfaz).
 
 ## Construir el paquete
 
 ```bash
-python3 packaging/build_deb.py --version 1.0.0   # genera dist/iso2appletv_1.1.1_all.deb
+python3 packaging/build_deb.py --version 1.0.0   # genera dist/transcodex_1.1.1_all.deb
 ```
 
 ## Licencia
