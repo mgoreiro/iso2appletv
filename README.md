@@ -31,7 +31,27 @@ sudo apt install ./transcodex_<version>_all.deb
 
 It pulls in `handbrake-cli`. For encrypted discs you will also want `libdvd-pkg` and `libbluray`.
 
-### Other systems
+### macOS and Linux (Homebrew)
+
+```bash
+brew install mgoreiro/transcodex/transcodex
+```
+
+### Any system with Python (PyPI)
+
+Needs [HandBrakeCLI](https://handbrake.fr/) installed separately.
+
+```bash
+pipx install transcodex
+```
+
+### Arch Linux (AUR)
+
+```bash
+yay -S transcodex
+```
+
+### From source
 
 `transcodex` is a single Python 3 file with no third-party modules. Install HandBrakeCLI, then run:
 
