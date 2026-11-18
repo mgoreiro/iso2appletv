@@ -1,46 +1,91 @@
 # transcodex
 
-TUI para convertir ISOs de DVD/Blu-ray y ficheros de vídeo a `.m4v` compatible con Apple TV usando HandBrakeCLI.
+[Español](README.es.md)
 
-> Antes se llamaba `iso2appletv`. Lee la configuración y el historial del nombre anterior. No está afiliado al proyecto HandBrake.
+A terminal UI that converts DVD/Blu-ray ISOs and video files into `.m4v` files
+that play on Apple TV, using [HandBrakeCLI](https://handbrake.fr/).
 
-- Orígenes: imágenes ISO/IMG y ficheros de vídeo (mkv, mp4, avi, mov, ts, m2ts, wmv, mpg, vob…), sueltos o por carpeta; mismas opciones para todos.
-- Vídeo H.264 High@4.1 hasta 720p, audio AC3 (copia si ya es AC3), capítulos, faststart.
-- Lista de ficheros con estado y hora de finalización, log de HandBrakeCLI o resumen de cada conversión, y panel de sistema (CPU, RAM, disco).
-- HandBrakeCLI se ejecuta con `nice -n 19` (y `ionice -c3` si existe).
-- Salida a `.m4v.part` y renombrado solo al terminar bien.
-- Carpeta de salida configurable desde la interfaz (tecla `o`).
-- Explorador de ISOs integrado (tecla `i`): el fondo se congela mientras está abierto, sin parpadeo del monitor.
+![transcodex demo](docs/demo.gif)
 
-## Instalación (Debian/Ubuntu)
+> Formerly `iso2appletv`; it still reads the old config and history.
+> Not affiliated with the HandBrake project.
 
-Descarga el `.deb` de la sección *Releases* e instálalo:
+## Features
 
-```bash
-sudo apt install ./transcodex_1.1.1_all.deb
-```
+- **Sources:** ISO/IMG images and video files (mkv, mp4, avi, mov, ts, m2ts, wmv, mpg, vob…), single files or whole folders, all with the same options.
+- **Apple TV friendly output:** H.264 High@4.1 up to 720p, AC3 audio (copied when already AC3), chapters, faststart.
+- **Live queue:** per-file status and finish time, HandBrakeCLI log or per-conversion summary, and a system panel (CPU, RAM, disk).
+- **Gentle on your machine:** runs HandBrakeCLI with `nice -n 19` (and `ionice -c3` when available).
+- **Safe output:** writes to `.m4v.part` and renames only when the conversion succeeds.
+- **Built-in ISO browser** (`i`) and a configurable output folder (`o`).
 
-## Uso
+## Install
 
-```bash
-transcodex                          # sin argumentos: abre el explorador para elegir ISOs
-transcodex peli.iso                 # abre la lista y espera a pulsar s
-transcodex ~/isos/ -r               # todas las ISOs y vídeos de una carpeta (y subcarpetas)
-transcodex pelicula.mkv serie/      # ficheros de vídeo sueltos o carpetas con vídeos
-transcodex -y -c a.iso b.iso        # un fichero por capítulo, empieza solo
-```
+### Debian / Ubuntu
 
-Teclas: `Tab` cambia de panel, flechas/RePág/AvPág desplazan, `espacio` incluye/omite, `s` inicia,
-`p` pausa, `x` cancela el actual, `r` reintenta, `l` log/resumen, `i` añadir ISOs, `o` carpeta de salida, `?` ayuda, `q` salir.
-
-`transcodex.sh` es el script original (sin interfaz).
-
-## Construir el paquete
+Download the `.deb` from the [Releases](../../releases) page and install it:
 
 ```bash
-python3 packaging/build_deb.py --version 1.0.0   # genera dist/transcodex_1.1.1_all.deb
+sudo apt install ./transcodex_<version>_all.deb
 ```
 
-## Licencia
+It pulls in `handbrake-cli`. For encrypted discs you will also want `libdvd-pkg` and `libbluray`.
 
-GPL-3.0 o posterior. Ver [LICENSE](LICENSE).
+### macOS and Linux (Homebrew)
+
+```bash
+brew install mgoreiro/transcodex/transcodex
+```
+
+### Any system with Python (PyPI)
+
+Needs [HandBrakeCLI](https://handbrake.fr/) installed separately.
+
+```bash
+pipx install transcodex
+```
+
+### Arch Linux (AUR)
+
+```bash
+yay -S transcodex
+```
+
+### From source
+
+`transcodex` is a single Python 3 file with no third-party modules. Install HandBrakeCLI, then run:
+
+```bash
+python3 transcodex.py
+```
+
+## Usage
+
+```bash
+transcodex                          # no arguments: open the browser to pick ISOs
+transcodex movie.iso                # open the list and wait for `s` to start
+transcodex ~/isos/ -r               # every ISO and video in a folder (and subfolders)
+transcodex film.mkv series/         # loose video files or folders with videos
+transcodex -y -c a.iso b.iso        # one file per chapter, start right away
+```
+
+Keys: `Tab` switches panel, arrows/PgUp/PgDn scroll, `space` include/skip, `s` start,
+`p` pause, `x` cancel current, `r` retry, `l` log/summary, `i` add ISOs, `o` output folder, `?` help, `q` quit.
+
+Run `transcodex --help` for all options (`-q` quality, `-t` titles, `-d` minimum title length, `-o` output folder).
+`transcodex.sh` is the original script without an interface.
+
+## Build the package
+
+```bash
+python3 packaging/build_deb.py --version 1.2.0   # creates dist/transcodex_1.2.0_all.deb
+```
+
+## A note on discs
+
+Use transcodex only to make copies of discs and files you own, and check what
+your local law allows when a disc is copy-protected.
+
+## License
+
+GPL-3.0 or later. See [LICENSE](LICENSE).

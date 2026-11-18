@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "transcodex"
+dynamic = ["version"]
+description = "Terminal UI that converts DVD/Blu-ray ISOs and video files to Apple TV compatible .m4v using HandBrakeCLI"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+authors = [{ name = "Miguel", email = "mgoreiro@gmail.com" }]
+keywords = ["handbrake", "apple-tv", "dvd", "blu-ray", "iso", "transcode", "tui", "curses"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console :: Curses",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: POSIX",
+    "Programming Language :: Python :: 3",
+    "Topic :: Multimedia :: Video :: Conversion",
+]
+
+[project.urls]
+Homepage = "https://github.com/mgoreiro/transcodex"
+Issues = "https://github.com/mgoreiro/transcodex/issues"
+
+[project.scripts]
+transcodex = "transcodex:main"
+
+[tool.setuptools]
+py-modules = ["transcodex"]
+
+[tool.setuptools.dynamic]
+version = { attr = "transcodex.__version__" }
