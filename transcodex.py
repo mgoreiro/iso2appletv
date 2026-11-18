@@ -47,7 +47,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
-__version__ = "1.3.0"
+__version__ = "1.3.1"
 
 ### CONFIGURACIÓN ###########################################################
 # La carpeta de salida se cambia desde la interfaz (tecla o) y se guarda en

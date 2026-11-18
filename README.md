@@ -1,11 +1,11 @@
 # transcodex
 
-[Español](README.es.md)
+[Español](https://github.com/mgoreiro/transcodex/blob/main/README.es.md)
 
 A terminal UI that converts DVD/Blu-ray ISOs and video files into `.m4v` files
 that play on Apple TV, using [HandBrakeCLI](https://handbrake.fr/).
 
-![transcodex demo](docs/demo.gif)
+![transcodex demo](https://raw.githubusercontent.com/mgoreiro/transcodex/main/docs/demo.gif)
 
 > Formerly `iso2appletv`; it still reads the old config and history.
 > Not affiliated with the HandBrake project.
@@ -23,7 +23,7 @@ that play on Apple TV, using [HandBrakeCLI](https://handbrake.fr/).
 
 ### Debian / Ubuntu
 
-Download the `.deb` from the [Releases](../../releases) page and install it:
+Download the `.deb` from the [Releases](https://github.com/mgoreiro/transcodex/releases) page and install it:
 
 ```bash
 sudo apt install ./transcodex_<version>_all.deb
@@ -88,4 +88,4 @@ your local law allows when a disc is copy-protected.
 
 ## License
 
-GPL-3.0 or later. See [LICENSE](LICENSE).
+GPL-3.0 or later. See [LICENSE](https://github.com/mgoreiro/transcodex/blob/main/LICENSE).
