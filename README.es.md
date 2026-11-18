@@ -16,13 +16,39 @@ TUI para convertir ISOs de DVD/Blu-ray y ficheros de vídeo a `.m4v` compatible 
 - Carpeta de salida configurable desde la interfaz (tecla `o`).
 - Explorador de ISOs integrado (tecla `i`): el fondo se congela mientras está abierto, sin parpadeo del monitor.
 
-## Instalación (Debian/Ubuntu)
+## Instalación
+
+### Debian / Ubuntu
 
 Descarga el `.deb` de la sección *Releases* e instálalo:
 
 ```bash
 sudo apt install ./transcodex_<versión>_all.deb
 ```
+
+### macOS y Linux (Homebrew)
+
+```bash
+brew install mgoreiro/transcodex/transcodex
+```
+
+### Cualquier sistema con Python (PyPI)
+
+Necesita [HandBrakeCLI](https://handbrake.fr/) instalado aparte.
+
+```bash
+pipx install transcodex
+```
+
+### Arch Linux (AUR)
+
+```bash
+yay -S transcodex
+```
+
+### Desde el código
+
+Un solo fichero de Python 3 sin módulos externos. Con HandBrakeCLI instalado: `python3 transcodex.py`.
 
 ## Uso
 

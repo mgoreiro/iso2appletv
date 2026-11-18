@@ -1,0 +1,26 @@
+# Maintainer: Miguel <mgoreiro@gmail.com>
+pkgname=transcodex
+pkgver=1.3.0
+pkgrel=1
+pkgdesc="TUI to convert DVD/Blu-ray ISOs and video files to Apple TV compatible .m4v using HandBrakeCLI"
+arch=('any')
+url="https://github.com/mgoreiro/transcodex"
+license=('GPL-3.0-or-later')
+depends=('python' 'handbrake-cli')
+optdepends=('libdvdcss: read encrypted DVDs'
+            'libbluray: read Blu-ray discs'
+            'libaacs: decrypt AACS-protected Blu-ray discs')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+check() {
+  cd "$pkgname-$pkgver"
+  python transcodex.py --version
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  install -Dm755 transcodex.py "$pkgdir/usr/bin/transcodex"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

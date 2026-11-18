@@ -47,6 +47,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
 
+__version__ = "1.3.0"
+
 ### CONFIGURACIÓN ###########################################################
 # La carpeta de salida se cambia desde la interfaz (tecla o) y se guarda en
 # ~/.config/transcodex/config.json. La opción -o la sobrescribe solo esa vez.
@@ -1427,6 +1429,7 @@ def main():
     ap.add_argument("-c", "--chapters", action="store_true", help="un archivo por capítulo")
     ap.add_argument("-y", "--yes", action="store_true", help="iniciar la conversión sin esperar a pulsar s")
     ap.add_argument("-D", "--check", action="store_true", help="comprobar dependencias y salir")
+    ap.add_argument("-V", "--version", action="version", version=f"transcodex {__version__}")
     args = ap.parse_args()
 
     if args.check:
