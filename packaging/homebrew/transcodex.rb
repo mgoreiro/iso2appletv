@@ -9,7 +9,7 @@ class Transcodex < Formula
   depends_on "python@3.13"
 
   def install
-    inreplace "transcodex.py", "#!/usr/bin/env python3", "#!#{Formula["python@3.13"].opt_bin}/python3.13"
+    inreplace "transcodex.py", "#!/usr/bin/env python3", "#!#{formula_opt_bin("python@3.13")}/python3.13"
     bin.install "transcodex.py" => "transcodex"
   end
 
