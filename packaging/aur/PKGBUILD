@@ -11,7 +11,7 @@ optdepends=('libdvdcss: read encrypted DVDs'
             'libbluray: read Blu-ray discs'
             'libaacs: decrypt AACS-protected Blu-ray discs')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('61c2f6e9181be5604a4692c3a65048b8cd575fa4bf9e74a942726cc0d5c187f2')
 
 check() {
   cd "$pkgname-$pkgver"
