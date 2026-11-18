@@ -1,15 +1,17 @@
-# Genera docs/demo.gif:  vhs docs/demo.tape   (necesita vhs, ffmpeg y HandBrakeCLI)
+# Genera docs/demo.gif (necesita vhs, ffmpeg y HandBrakeCLI):
+#   docs/demo-setup.sh && PATH="$PWD/bin-demo:$PATH" vhs docs/demo.tape
+# donde bin-demo/transcodex es un enlace a transcodex.py (o transcodex ya instalado).
 Output docs/demo.gif
 Set Shell "bash"
 Set FontSize 16
 Set Width 1200
 Set Height 700
 Set Padding 12
+Set TypingSpeed 60ms
 
 Hide
-Type "export PS1='$ ' && mkdir -p /tmp/transcodex-demo/in /tmp/transcodex-demo/out && cd /tmp/transcodex-demo" Enter
-Type "for n in pelicula serie-e01 serie-e02; do ffmpeg -loglevel error -y -f lavfi -i testsrc=duration=20:size=1280x720:rate=24 -f lavfi -i sine=duration=20 -c:v libx264 -c:a aac in/$n.mkv; done" Enter
-Type "clear" Enter
+Type "cd /tmp/transcodex-demo && PS1='$ ' && clear" Enter
+Sleep 1s
 Show
 
 Type "transcodex -o out in/ -y" Sleep 500ms Enter

@@ -5,6 +5,8 @@
 A terminal UI that converts DVD/Blu-ray ISOs and video files into `.m4v` files
 that play on Apple TV, using [HandBrakeCLI](https://handbrake.fr/).
 
+![transcodex demo](docs/demo.gif)
+
 > Formerly `iso2appletv`; it still reads the old config and history.
 > Not affiliated with the HandBrake project.
 

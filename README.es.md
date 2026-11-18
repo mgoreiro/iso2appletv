@@ -4,6 +4,8 @@
 
 TUI para convertir ISOs de DVD/Blu-ray y ficheros de vídeo a `.m4v` compatible con Apple TV usando HandBrakeCLI.
 
+![transcodex demo](docs/demo.gif)
+
 > Antes se llamaba `iso2appletv`. Lee la configuración y el historial del nombre anterior. No está afiliado al proyecto HandBrake.
 
 - Orígenes: imágenes ISO/IMG y ficheros de vídeo (mkv, mp4, avi, mov, ts, m2ts, wmv, mpg, vob…), sueltos o por carpeta; mismas opciones para todos.
